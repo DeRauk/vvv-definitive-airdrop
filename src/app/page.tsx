@@ -74,6 +74,9 @@ const ProxyContractCaller = () => {
       if (!data.trim()) {
         throw new Error('Please enter data');
       }
+      if (!data.startsWith('0x')) {
+        throw new Error('Data must start with 0x');
+      }
       if (!window.ethereum) {
         throw new Error('Please install MetaMask or another web3 wallet');
       }
@@ -89,6 +92,19 @@ const ProxyContractCaller = () => {
       // Create contract instance using the static ABI
       const contract = new ethers.Contract(proxyAddress, IMPLEMENTATION_ABI, signer);
 
+      // First try to estimate gas to get a better error message
+      try {
+        await contract.execute.estimateGas(TARGET_ADDRESS, 0, data, {
+          value: 0
+        });
+      } catch (estimateErr: any) {
+        if (estimateErr?.data) {
+          // If there's custom error data, try to decode it
+          throw new Error(`Contract error: ${estimateErr.data}`);
+        }
+        throw estimateErr;
+      }
+
       // Call the execute function with hardcoded values
       const tx = await contract.execute(TARGET_ADDRESS, 0, data, {
         value: 0
@@ -98,6 +114,7 @@ const ProxyContractCaller = () => {
       await tx.wait();
       setSuccess('Transaction successful!');
     } catch (err: unknown) {
+      console.error('Detailed error:', err); // This will help with debugging
       setError(err instanceof Error ? err.message : 'Failed to call contract');
     } finally {
       setLoading(false);
@@ -108,12 +125,12 @@ const ProxyContractCaller = () => {
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="w-full max-w-2xl mx-auto shadow-lg">
         <CardHeader className="text-center bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-t-lg">
-          <CardTitle className="text-2xl font-bold">Definitive $VVV Airdrop Claim</CardTitle>
+          <CardTitle className="text-3xl font-bold">Definitive $VVV Airdrop Claim</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6 p-6">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <label htmlFor="proxyAddress" className="text-sm font-medium text-gray-700">
+              <label htmlFor="proxyAddress" className="text-sm font-semibold text-gray-900">
                 Account Address
               </label>
               <input
@@ -122,13 +139,13 @@ const ProxyContractCaller = () => {
                 value={proxyAddress}
                 onChange={(e) => setProxyAddress(e.target.value)}
                 placeholder="Enter your Definitive Base vault address"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 placeholder-gray-500"
                 disabled={loading}
               />
             </div>
 
             <div className="flex flex-col gap-2">
-              <label htmlFor="data" className="text-sm font-medium text-gray-700">
+              <label htmlFor="data" className="text-sm font-semibold text-gray-900">
                 Claim Data
               </label>
               <input
@@ -136,10 +153,13 @@ const ProxyContractCaller = () => {
                 type="text"
                 value={data}
                 onChange={(e) => setData(e.target.value)}
-                placeholder="Enter your call data"
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                placeholder="Enter your call data (starts with 0x)"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900 placeholder-gray-500"
                 disabled={loading}
               />
+              <p className="text-sm text-gray-600 font-medium">
+                Make sure your claim data starts with 0x and matches the format provided by Definitive
+              </p>
             </div>
 
             <button
@@ -187,7 +207,7 @@ const ProxyContractCaller = () => {
 
           {error && (
             <Alert variant="destructive" className="animate-fadeIn">
-              <AlertDescription className="flex items-center gap-2">
+              <AlertDescription className="flex items-center gap-2 text-gray-900">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
@@ -197,8 +217,8 @@ const ProxyContractCaller = () => {
           )}
 
           {success && (
-            <Alert className="bg-green-50 text-green-800 border-green-200 animate-fadeIn">
-              <AlertDescription className="flex items-center gap-2">
+            <Alert className="bg-green-50 border-green-200 animate-fadeIn">
+              <AlertDescription className="flex items-center gap-2 text-green-900">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
@@ -209,12 +229,12 @@ const ProxyContractCaller = () => {
 
           {txHash && (
             <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200 animate-fadeIn">
-              <p className="font-semibold text-blue-800 mb-2">Transaction Hash:</p>
+              <p className="font-semibold text-gray-900 mb-2">Transaction Hash:</p>
               <a 
                 href={`https://basescan.org/tx/${txHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 break-all transition-colors duration-200"
+                className="text-blue-700 hover:text-blue-900 break-all transition-colors duration-200"
               >
                 {txHash}
               </a>
