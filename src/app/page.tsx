@@ -74,6 +74,9 @@ const ProxyContractCaller = () => {
       if (!data.trim()) {
         throw new Error('Please enter data');
       }
+      if (!window.ethereum) {
+        throw new Error('Please install MetaMask or another web3 wallet');
+      }
 
       setLoading(true);
       setError('');
