@@ -106,6 +106,8 @@ const ProxyContractCaller = () => {
         const contractError = estimateErr as ContractError;
         if (contractError?.data) {
           // If there's custom error data, try to decode it
+          console.log(estimateErr);
+          console.log(contractError);
           throw new Error(`Contract error: ${contractError.data}`);
         }
         throw estimateErr;
