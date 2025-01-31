@@ -6,8 +6,18 @@ declare global {
       isMetaMask?: boolean;
       request: (args: {
         method: string;
-        params?: unknown[];
-      }) => Promise<unknown>;
+        params?: Array<{
+          chainId?: string;
+          chainName?: string;
+          nativeCurrency?: {
+            name: string;
+            symbol: string;
+            decimals: number;
+          };
+          rpcUrls?: string[];
+          blockExplorerUrls?: string[];
+        } | string[]>;
+      }) => Promise<string | void>;
     };
   }
 } 
