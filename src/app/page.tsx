@@ -5,6 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { IMPLEMENTATION_ABI } from '@/lib/abi';
 
+type ContractError = Error & {
+  data?: string;
+  code?: string | number;
+};
+
 const ProxyContractCaller = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -97,10 +102,11 @@ const ProxyContractCaller = () => {
         await contract.execute.estimateGas(TARGET_ADDRESS, 0, data, {
           value: 0
         });
-      } catch (estimateErr: any) {
-        if (estimateErr?.data) {
+      } catch (estimateErr) {
+        const contractError = estimateErr as ContractError;
+        if (contractError?.data) {
           // If there's custom error data, try to decode it
-          throw new Error(`Contract error: ${estimateErr.data}`);
+          throw new Error(`Contract error: ${contractError.data}`);
         }
         throw estimateErr;
       }
